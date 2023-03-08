@@ -7,6 +7,7 @@ import asyncio
 
 models.Base.metadata.create_all(engine)
 
+
 def get_db():
     db = SessionLocal()
     try:
@@ -14,7 +15,9 @@ def get_db():
     finally:
         db.close()
 
+
 app = FastAPI()
+
 
 @app.post('/create-claim')
 def create_claim(request: schemas.Claim, db: Session = Depends(get_db)):
@@ -30,6 +33,16 @@ def create_claim(request: schemas.Claim, db: Session = Depends(get_db)):
 def fetch_all_claims(db: Session = Depends(get_db)):
     claims = db.query(models.Claim).all()
     return claims
+
+
+@app.get('/payment')
+def fetch_payment_by_service_date(service_date: str, db: Session = Depends(get_db)):
+    pass
+
+
+@app.delete('/payment')
+def reverse_payment(claim_id: int, member_id: int, service_date: str, db: Session = Depends(get_db)):
+    pass
 
 
 app.include_router(route)

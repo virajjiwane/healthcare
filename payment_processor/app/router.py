@@ -1,4 +1,6 @@
 from fastapi import APIRouter
+
+from .claim_utils import process_claim
 from .config import loop, KAFKA_BOOTSTRAP_SERVERS, KAFKA_CONSUMER_GROUP, KAFKA_TOPIC, log
 from aiokafka import AIOKafkaConsumer
 import json
@@ -13,6 +15,7 @@ async def consume():
     try:
         async for msg in consumer:
             log.info(f'Consumer msg: {msg}')
+            process_claim(json.loads(msg.value))
 
     finally:
         await consumer.stop()
