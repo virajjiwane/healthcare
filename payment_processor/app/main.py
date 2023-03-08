@@ -57,7 +57,26 @@ def fetch_payment_by_service_date(service_date: str, db: Session = Depends(get_d
 
 @app.delete('/payment')
 def reverse_payment(claim_id: int, member_id: int, service_date: str, db: Session = Depends(get_db)):
-    pass
+    service_date = parse(service_date).date()
+    payments = db.query(models.Payment).filter_by(service_date=service_date,
+                                                  claim_id=claim_id,
+                                                  member_id=member_id).all()
+    log.info(f"PAYMENTS TO REVERSE: {payments}")
+    for payment in payments:
+        log.info(f'REVERSING {payment.payment_id}')
+        with open(payment.nacha_file_name, "r") as f:
+            lines = f.readlines()
+        with open(payment.nacha_file_name, "w") as f:
+            log.info(f'LOOKING INTO FILE {payment.nacha_file_name}')
+            for line in lines:
+                log.info(f'CURRENT LINE {line}')
+                payment_record_id = int(line.strip("\n").split("\t")[0])
+                log.info(f'payment_record_id={payment_record_id}')
+                if payment_record_id != payment.payment_id:
+                    log.info(f"THIS LINE IS OK")
+                    f.write(line)
+                else:
+                    log.info(f"FOUND THE LINE TO BE DELETED")
 
 
 app.include_router(route)
