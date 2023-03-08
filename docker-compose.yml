@@ -37,7 +37,9 @@ services:
       - kafka
   payment-processor:
     container_name: payment-processor
-    build: .
+    build:
+      context: payment_processor
+      dockerfile: Dockerfile
     command: uvicorn app.main:app --host 0.0.0.0
     ports:
       - "8000:8000"
