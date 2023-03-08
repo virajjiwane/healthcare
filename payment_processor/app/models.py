@@ -28,3 +28,11 @@ class Payment(Base):
     service_date = Column(Date)
     payment_amount = Column(DECIMAL)
     nacha_file_name = Column(String)
+
+
+class Member(Base):
+    __tablename__ = 'members'
+    member_id = Column(Integer, primary_key=True, index=True)
+    bank_institution = Column(String)
+    account_number = Column(BigInteger)
+    routing_number = Column(BigInteger)

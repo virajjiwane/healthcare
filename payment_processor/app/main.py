@@ -3,10 +3,15 @@ import datetime
 from dateutil.parser import parse
 from fastapi import FastAPI, Depends
 from . import models, schemas
+from .config import log
 from .database import engine, SessionLocal
 from sqlalchemy.orm import Session
+
 from .router import consume, route
 import asyncio
+import pandas as pd
+
+from .shared_utils import clean
 
 models.Base.metadata.create_all(engine)
 
@@ -37,6 +42,11 @@ def fetch_all_claims(db: Session = Depends(get_db)):
     claims = db.query(models.Claim).all()
     return claims
 
+@app.get('/members')
+def fetch_all_members(db: Session = Depends(get_db)):
+    members = db.query(models.Member).all()
+    return members
+
 
 @app.get('/payment')
 def fetch_payment_by_service_date(service_date: str, db: Session = Depends(get_db)):
@@ -52,3 +62,19 @@ def reverse_payment(claim_id: int, member_id: int, service_date: str, db: Sessio
 
 app.include_router(route)
 asyncio.create_task(consume())
+
+
+@app.on_event("startup")
+async def populate_members():
+    log.info(f"{'#'*5} POPULATING MEMBERS {'#'*5}")
+    members = pd.read_csv('members_1234.csv').to_dict('index')
+    with Session(engine) as db:
+        for index, member_dict in members.items():
+            member_dict = clean(member_dict)
+            log.info(f"MEMBER: {member_dict}")
+            member = models.Member(**member_dict)
+            db.add(member)
+            db.commit()
+            db.refresh(member)
+
+    log.info(f"{'#'*5} POPULATING MEMBERS DONE {'#'*5}")
