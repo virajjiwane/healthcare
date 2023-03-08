@@ -1,3 +1,6 @@
+import datetime
+
+from dateutil.parser import parse
 from fastapi import FastAPI, Depends
 from . import models, schemas
 from .database import engine, SessionLocal
@@ -37,7 +40,9 @@ def fetch_all_claims(db: Session = Depends(get_db)):
 
 @app.get('/payment')
 def fetch_payment_by_service_date(service_date: str, db: Session = Depends(get_db)):
-    pass
+    service_date = parse(service_date).date()
+    payments = db.query(models.Payment).filter_by(service_date=service_date).all()
+    return payments
 
 
 @app.delete('/payment')

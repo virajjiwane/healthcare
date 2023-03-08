@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, DateTime, String, BigInteger, DECIMAL
+from sqlalchemy import Column, Integer, String, BigInteger, DECIMAL, Date
 from .database import Base
 
 
@@ -6,7 +6,7 @@ class Claim(Base):
     __tablename__ = 'claims'
     claim_id = Column(Integer, primary_key=True, index=True)
     member_id = Column(Integer)
-    service_date = Column(DateTime)
+    service_date = Column(Date)
     submitted_procedure = Column(String)
     quadrant = Column(String)
     plan_group_no = Column(String)
@@ -18,3 +18,13 @@ class Claim(Base):
     member_copay = Column(DECIMAL)
     net_fee = Column(DECIMAL)
     processing_fees = Column(DECIMAL)
+
+
+class Payment(Base):
+    __tablename__ = 'payments'
+    payment_id = Column(Integer, primary_key=True, index=True)
+    claim_id = Column(Integer)
+    member_id = Column(Integer)
+    service_date = Column(Date)
+    payment_amount = Column(DECIMAL)
+    nacha_file_name = Column(String)
