@@ -24,7 +24,7 @@ async def produce_claims():
         log.info(f"{'#'*5} PRODUCING A CLAIM {'#'*5}")
         claim_str = json.dumps(claim)
         log.info(f"CLAIM: {claim_str}")
-        await produce_message(Message(message=claim_str))
+        await produce_message(claim)
 
         log.info(f"{'#'*5} PRODUCED A CLAIM {'#'*5}")
 
