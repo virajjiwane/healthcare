@@ -1,12 +1,11 @@
 import datetime
-
 from fastapi import Depends
 from sqlalchemy.orm import Session
 import string
 import random
 from .config import log
 from .database import engine
-from .models import Claim, Payment
+from .models import Claim, Payment, Member
 from dateutil.parser import parse
 from re import sub
 from decimal import Decimal
@@ -30,6 +29,7 @@ def insert_claim_in_db(claim: Claim) -> Claim:
         db.commit()
         db.refresh(claim)
     return claim
+
 
 def generate_payment_record_id() -> int:
     with Session(engine) as db:
@@ -67,11 +67,19 @@ def insert_payment_record(payment) -> Payment:
         db.refresh(payment)
     return payment
 
-def generate_payment_record_line(claim: Claim) -> str:
-    pass
 
-def write_payment_record_line_to_nacha_file(payment_record_line: str, claim: Claim):
-    pass
+def generate_payment_record_line(payment: Payment) -> str:
+    with Session(engine) as db:
+        member = db.query(Member).filter_by(member_id=payment.member_id).first()
+        if member is None:
+            raise Exception(f"member with member_id {payment.member_id} not found")
+        return f"{payment.payment_id}\t{member.bank_institution}\t{member.routing_number}\t{member.account_number}\t{int(payment.payment_amount * 100)}"
+
+
+def write_payment_record_line_to_nacha_file(payment_record_line: str, payment: Payment):
+    filename = payment.nacha_file_name
+    with open(filename, 'a+') as f:
+        f.write(payment_record_line+"\n")
 
 
 def process_claim(raw_claim: dict):
@@ -90,8 +98,10 @@ def process_claim(raw_claim: dict):
     log.info(f"PAYMENT OBJECT | payment={payment}")
     payment = insert_payment_record(payment)
     log.info(f"INSERTED OBJECT | payment={payment}")
-    generate_payment_record_line(Claim())
-    write_payment_record_line_to_nacha_file('',Claim())
+    payment_record_line = generate_payment_record_line(payment)
+    log.info(f"PAYMENT RECORD LINE | payment_record_line={payment_record_line}")
+    write_payment_record_line_to_nacha_file(payment_record_line, payment)
+    log.info(f"PAYMENT RECORD LINE WRITTEN | payment_record_line={payment_record_line} TO FILE {payment.nacha_file_name}")
     log.info(f"{'*'*20}  PROCESSED CLAIM | raw_claim={raw_claim} {'*'*20} ")
 
 
