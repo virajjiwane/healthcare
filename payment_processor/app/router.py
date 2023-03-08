@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .config import loop, KAFKA_BOOTSTRAP_SERVERS, KAFKA_CONSUMER_GROUP, KAFKA_TOPIC
+from .config import loop, KAFKA_BOOTSTRAP_SERVERS, KAFKA_CONSUMER_GROUP, KAFKA_TOPIC, log
 from aiokafka import AIOKafkaConsumer
 import json
 
@@ -12,6 +12,7 @@ async def consume():
     await consumer.start()
     try:
         async for msg in consumer:
-            print(f'Consumer msg: {msg}')
+            log.info(f'Consumer msg: {msg}')
+
     finally:
         await consumer.stop()
