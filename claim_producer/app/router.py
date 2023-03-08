@@ -1,20 +1,11 @@
 from fastapi import APIRouter
+
+from .producers import produce_message
 from .schemas import Message
-from .config import loop, KAFKA_BOOTSTRAP_SERVERS, KAFKA_CONSUMER_GROUP, KAFKA_TOPIC
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-import json
 
 route = APIRouter()
 
 
 @route.post('/create_message')
 async def send(message: Message):
-    producer = AIOKafkaProducer(
-        loop=loop, bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
-    await producer.start()
-    try:
-        print(f'Sending message with value: {message}')
-        value_json = json.dumps(message.__dict__).encode('utf-8')
-        await producer.send_and_wait(topic=KAFKA_TOPIC, value=value_json)
-    finally:
-        await producer.stop()
+    await produce_message(message)
