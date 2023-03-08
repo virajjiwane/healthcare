@@ -50,3 +50,18 @@ services:
     depends_on:
       - kafka
       - zookeeper
+  claim_producer:
+    container_name: claim-producer
+    build:
+      context: claim_producer
+      dockerfile: Dockerfile
+    command: uvicorn app.main:app --host 0.0.0.0
+    ports:
+      - "8080:8000"
+    environment:
+      - KAFKA_HOST=kafka
+      - KAFKA_PORT=9092
+      - KAFKA_TOPIC=claims
+    depends_on:
+      - kafka
+      - zookeeper
