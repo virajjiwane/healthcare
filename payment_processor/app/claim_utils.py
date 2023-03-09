@@ -1,4 +1,6 @@
 import datetime
+
+import portalocker
 from fastapi import Depends
 from sqlalchemy.orm import Session
 import string
@@ -23,11 +25,9 @@ def build_claim(claim_dict: dict) -> Claim:
     return Claim(**claim_dict)
 
 
-def insert_claim_in_db(claim: Claim) -> Claim:
-    with Session(engine) as db:
-        db.add(claim)
-        db.commit()
-        db.refresh(claim)
+def insert_claim_in_db(claim: Claim, db) -> Claim:
+    db.add(claim)
+    db.flush()
     return claim
 
 
@@ -60,11 +60,9 @@ def build_payment(claim: Claim, payment_record_id: int, total_payment: Decimal) 
     )
 
 
-def insert_payment_record(payment) -> Payment:
-    with Session(engine) as db:
-        db.add(payment)
-        db.commit()
-        db.refresh(payment)
+def insert_payment_record(payment: Payment, db: Session) -> Payment:
+    db.add(payment)
+    db.flush()
     return payment
 
 
@@ -79,30 +77,39 @@ def generate_payment_record_line(payment: Payment) -> str:
 def write_payment_record_line_to_nacha_file(payment_record_line: str, payment: Payment):
     filename = payment.nacha_file_name
     with open(filename, 'a+') as f:
+        portalocker.lock(f, portalocker.LockFlags.EXCLUSIVE)
         f.write(payment_record_line+"\n")
 
 
 def process_claim(raw_claim: dict):
-    log.info(f"{'*'*20}  PROCESSING CLAIM | raw_claim={raw_claim} {'*'*20} ")
-    cleaned_claim = clean(raw_claim)
-    log.info(f"CLEANED CLAIM | cleaned_claim={cleaned_claim}")
-    claim = build_claim(cleaned_claim)
-    log.info(f"CLAIM OBJECT | claim={claim}")
-    claim = insert_claim_in_db(claim)
-    log.info(f"INSERTED OBJECT | claim={claim}")
-    payment_record_id = generate_payment_record_id()
-    log.info(f"PAYMENT RECORD ID | payment_record_id={payment_record_id}")
-    total_payment = calculate_total_payment(claim)
-    log.info(f"TOTAL PAYMENT | total_payment={total_payment}")
-    payment = build_payment(claim, payment_record_id, total_payment)
-    log.info(f"PAYMENT OBJECT | payment={payment}")
-    payment = insert_payment_record(payment)
-    log.info(f"INSERTED OBJECT | payment={payment}")
-    payment_record_line = generate_payment_record_line(payment)
-    log.info(f"PAYMENT RECORD LINE | payment_record_line={payment_record_line}")
-    write_payment_record_line_to_nacha_file(payment_record_line, payment)
-    log.info(f"PAYMENT RECORD LINE WRITTEN | payment_record_line={payment_record_line} TO FILE {payment.nacha_file_name}")
-    log.info(f"{'*'*20}  PROCESSED CLAIM | raw_claim={raw_claim} {'*'*20} ")
+    with Session(engine) as db:
+        try:
+            log.info(f"{'*'*20}  PROCESSING CLAIM | raw_claim={raw_claim} {'*'*20} ")
+            cleaned_claim = clean(raw_claim)
+            log.info(f"CLEANED CLAIM | cleaned_claim={cleaned_claim}")
+            claim = build_claim(cleaned_claim)
+            log.info(f"CLAIM OBJECT | claim={claim}")
+            claim = insert_claim_in_db(claim, db)
+            log.info(f"INSERTED OBJECT | claim={claim}")
+            payment_record_id = generate_payment_record_id()
+            log.info(f"PAYMENT RECORD ID | payment_record_id={payment_record_id}")
+            total_payment = calculate_total_payment(claim)
+            log.info(f"TOTAL PAYMENT | total_payment={total_payment}")
+            payment = build_payment(claim, payment_record_id, total_payment)
+            log.info(f"PAYMENT OBJECT | payment={payment}")
+            payment = insert_payment_record(payment, db)
+            log.info(f"INSERTED OBJECT | payment={payment}")
+            payment_record_line = generate_payment_record_line(payment)
+            log.info(f"PAYMENT RECORD LINE | payment_record_line={payment_record_line}")
+            write_payment_record_line_to_nacha_file(payment_record_line, payment)
+            log.info(f"PAYMENT RECORD LINE WRITTEN | payment_record_line={payment_record_line} "
+                     f"TO FILE {payment.nacha_file_name}")
+            db.commit()
+            log.info(f"{'*'*20}  PROCESSED CLAIM | raw_claim={raw_claim} {'*'*20} ")
+        except Exception as e:
+            db.rollback()
+            log.exception(f"{'*'*20}  EXCEPTION PROCESSING CLAIM | raw_claim={raw_claim} {'*'*20} ")
+            log.exception(e)
 
 
 
