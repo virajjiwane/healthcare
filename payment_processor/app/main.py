@@ -6,7 +6,7 @@ from . import models, schemas
 from .config import log
 from .database import engine, SessionLocal
 from sqlalchemy.orm import Session
-
+import portalocker
 from .router import consume, route
 import asyncio
 import pandas as pd
@@ -68,6 +68,7 @@ def reverse_payment(claim_id: int, member_id: int, service_date: str, db: Sessio
             lines = f.readlines()
         with open(payment.nacha_file_name, "w") as f:
             log.info(f'LOOKING INTO FILE {payment.nacha_file_name}')
+            portalocker.lock(f, portalocker.LockFlags.EXCLUSIVE)
             for line in lines:
                 log.info(f'CURRENT LINE {line}')
                 payment_record_id = int(line.strip("\n").split("\t")[0])
