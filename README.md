@@ -14,7 +14,7 @@ docker compose up --build
 
 2. Run the pytest command in payment-processor container
 ```commandline
-docker-compose exec payment-processor pytest .
+docker-compose exec payment-processor pytest -v
 ```
 
 ### URLS
@@ -23,3 +23,5 @@ docker-compose exec payment-processor pytest .
 - kafdrop: http://localhost:9000/
 
 Note: Have used kafdrop for kafka testing
+
+Developed on Ubuntu 22.04.02 LTS

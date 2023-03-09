@@ -8,7 +8,6 @@ from .producers import produce_message
 
 app = FastAPI()
 
-
 claims = pd.read_csv('claim_fees_1234.csv').to_dict('index')
 
 
