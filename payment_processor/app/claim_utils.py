@@ -69,7 +69,8 @@ def generate_payment_record_line(payment: Payment) -> str:
         member = db.query(Member).filter_by(member_id=payment.member_id).first()
         if member is None:
             raise Exception(f"member with member_id {payment.member_id} not found")
-        return f"{payment.payment_id}\t{member.bank_institution}\t{member.routing_number}\t{member.account_number}\t{int(payment.payment_amount * 100)}"
+        return f"{payment.payment_id}\t{member.bank_institution}\t{member.routing_number}\t" \
+               f"{member.account_number}\t{int(payment.payment_amount * 100)}"
 
 
 def write_payment_record_line_to_nacha_file(payment_record_line: str, payment: Payment):
