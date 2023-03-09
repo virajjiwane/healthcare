@@ -45,7 +45,7 @@ def fetch_all_members(db: Session = Depends(get_db)):
 def fetch_payment_by_service_date(service_date: str, db: Session = Depends(get_db)):
     try:
         service_date = parse(service_date).date()
-    except Exception as e:
+    except Exception:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Bad service_date format")
     payments = db.query(models.Payment).filter_by(service_date=service_date).all()
     if not payments:
