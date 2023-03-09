@@ -1,17 +1,15 @@
-import datetime
+import random
+import string
+from decimal import Decimal
+from re import sub
 
 import portalocker
-from fastapi import Depends
+from dateutil.parser import parse
 from sqlalchemy.orm import Session
-import string
-import random
+
 from .config import log
 from .database import engine
 from .models import Claim, Payment, Member
-from dateutil.parser import parse
-from re import sub
-from decimal import Decimal
-
 from .shared_utils import clean
 
 
@@ -78,13 +76,13 @@ def write_payment_record_line_to_nacha_file(payment_record_line: str, payment: P
     filename = payment.nacha_file_name
     with open(filename, 'a+') as f:
         portalocker.lock(f, portalocker.LockFlags.EXCLUSIVE)
-        f.write(payment_record_line+"\n")
+        f.write(payment_record_line + "\n")
 
 
 def process_claim(raw_claim: dict):
     with Session(engine) as db:
         try:
-            log.info(f"{'*'*20}  PROCESSING CLAIM | raw_claim={raw_claim} {'*'*20} ")
+            log.info(f"{'*' * 20}  PROCESSING CLAIM | raw_claim={raw_claim} {'*' * 20} ")
             cleaned_claim = clean(raw_claim)
             log.info(f"CLEANED CLAIM | cleaned_claim={cleaned_claim}")
             claim = build_claim(cleaned_claim)
@@ -105,11 +103,8 @@ def process_claim(raw_claim: dict):
             log.info(f"PAYMENT RECORD LINE WRITTEN | payment_record_line={payment_record_line} "
                      f"TO FILE {payment.nacha_file_name}")
             db.commit()
-            log.info(f"{'*'*20}  PROCESSED CLAIM | raw_claim={raw_claim} {'*'*20} ")
+            log.info(f"{'*' * 20}  PROCESSED CLAIM | raw_claim={raw_claim} {'*' * 20} ")
         except Exception as e:
             db.rollback()
-            log.exception(f"{'*'*20}  EXCEPTION PROCESSING CLAIM | raw_claim={raw_claim} {'*'*20} ")
+            log.exception(f"{'*' * 20}  EXCEPTION PROCESSING CLAIM | raw_claim={raw_claim} {'*' * 20} ")
             log.exception(e)
-
-
-

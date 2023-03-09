@@ -1,18 +1,16 @@
-import datetime
+import asyncio
 
+import pandas as pd
+import portalocker
 from dateutil.parser import parse
 from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
 from starlette import status
 
 from . import models, schemas
 from .config import log
 from .database import engine, SessionLocal
-from sqlalchemy.orm import Session
-import portalocker
 from .router import consume, route
-import asyncio
-import pandas as pd
-
 from .shared_utils import clean
 
 models.Base.metadata.create_all(engine)
@@ -88,7 +86,7 @@ def reverse_payment(request: schemas.ReversePayment, db: Session = Depends(get_d
 
 @app.on_event("startup")
 async def populate_members():
-    log.info(f"{'#'*5} POPULATING MEMBERS {'#'*5}")
+    log.info(f"{'#' * 5} POPULATING MEMBERS {'#' * 5}")
     members = pd.read_csv('members_1234.csv').to_dict('index')
     with Session(engine) as db:
         for index, member_dict in members.items():
@@ -99,4 +97,4 @@ async def populate_members():
             db.commit()
             db.refresh(member)
 
-    log.info(f"{'#'*5} POPULATING MEMBERS DONE {'#'*5}")
+    log.info(f"{'#' * 5} POPULATING MEMBERS DONE {'#' * 5}")

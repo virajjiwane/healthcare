@@ -1,9 +1,8 @@
-
-from .config import loop, KAFKA_BOOTSTRAP_SERVERS, KAFKA_CONSUMER_GROUP, KAFKA_TOPIC, log
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 import json
 
-from .schemas import Message
+from aiokafka import AIOKafkaProducer
+
+from .config import loop, KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPIC, log
 
 
 async def produce_message(message):
