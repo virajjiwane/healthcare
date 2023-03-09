@@ -18,6 +18,5 @@ RUN chmod +x /app/entrypoint.sh
 # run entrypoint.sh
 ENTRYPOINT ["sh", "/app/entrypoint.sh"]
 COPY . .
-CMD [ "touch", "healthcare.db" ]
 EXPOSE 8000
 

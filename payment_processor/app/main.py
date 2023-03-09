@@ -29,32 +29,57 @@ def get_db():
         db.close()
 
 
-@app.get('/claims')
+@app.get('/claims', status_code=status.HTTP_200_OK, tags=["For Testing Purpose"])
 def fetch_all_claims(db: Session = Depends(get_db)):
+    """
+    This API returns all claims from the DB. It is for testing purpose only
+    :param db:
+    :return: List<Claim>
+    """
     claims = db.query(models.Claim).all()
     return claims
 
 
-@app.get('/members')
+@app.get('/members', status_code=status.HTTP_200_OK, tags=["For Testing Purpose"])
 def fetch_all_members(db: Session = Depends(get_db)):
+    """
+    This API returns all members from the DB. It is for testing purpose only
+    :param db:
+    :return: List<Member>
+    """
     members = db.query(models.Member).all()
     return members
 
 
-@app.get('/payment', status_code=status.HTTP_200_OK)
+@app.get('/payment', status_code=status.HTTP_200_OK, tags=["Required Functionality"])
 def fetch_payment_by_service_date(service_date: str, db: Session = Depends(get_db)):
+    """
+    An endpoint that allows the user to give a particular service date and then get all the payments that were created
+    for that date.
+    :param service_date:
+    :param db:
+    :return: List<Payment>
+    """
     try:
         service_date = parse(service_date).date()
     except Exception:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Bad service_date format")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Bad service_date format")
     payments = db.query(models.Payment).filter_by(service_date=service_date).all()
     if not payments:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Payments not found")
     return payments
 
 
-@app.delete('/payment', status_code=status.HTTP_204_NO_CONTENT)
+@app.delete('/payment', status_code=status.HTTP_204_NO_CONTENT, tags=["Required Functionality"])
 def reverse_payment(request: schemas.ReversePayment, db: Session = Depends(get_db)):
+    """
+    An endpoint that allows to reverse a payment using the values claim_id, member_id and service_date,
+    the processor will remove the payment record line from the nacha file.\n
+    To handle concurrency of I/O on the same file I have used portalocker to get an exclusive lock on the file.
+    :param request: ReversePayment
+    :param db:
+    :return: dictionary
+    """
     payments = db.query(models.Payment).filter_by(service_date=request.service_date,
                                                   claim_id=request.claim_id,
                                                   member_id=request.member_id).all()
