@@ -1,7 +1,9 @@
 import datetime
 
 from dateutil.parser import parse
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
+from starlette import status
+
 from . import models, schemas
 from .config import log
 from .database import engine, SessionLocal
@@ -15,6 +17,11 @@ from .shared_utils import clean
 
 models.Base.metadata.create_all(engine)
 
+app = FastAPI()
+
+app.include_router(route)
+asyncio.create_task(consume())
+
 
 def get_db():
     db = SessionLocal()
@@ -24,23 +31,11 @@ def get_db():
         db.close()
 
 
-app = FastAPI()
-
-
-@app.post('/create-claim')
-def create_claim(request: schemas.Claim, db: Session = Depends(get_db)):
-    new_claim = models.Claim(claim_id=request.claim_id,
-                             member_id=request.member_id)
-    db.add(new_claim)
-    db.commit()
-    db.refresh(new_claim)
-    return new_claim
-
-
 @app.get('/claims')
 def fetch_all_claims(db: Session = Depends(get_db)):
     claims = db.query(models.Claim).all()
     return claims
+
 
 @app.get('/members')
 def fetch_all_members(db: Session = Depends(get_db)):
@@ -48,19 +43,26 @@ def fetch_all_members(db: Session = Depends(get_db)):
     return members
 
 
-@app.get('/payment')
+@app.get('/payment', status_code=status.HTTP_200_OK)
 def fetch_payment_by_service_date(service_date: str, db: Session = Depends(get_db)):
-    service_date = parse(service_date).date()
+    try:
+        service_date = parse(service_date).date()
+    except Exception as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Bad service_date format")
     payments = db.query(models.Payment).filter_by(service_date=service_date).all()
+    if not payments:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Payments not found")
     return payments
 
 
-@app.delete('/payment')
-def reverse_payment(claim_id: int, member_id: int, service_date: str, db: Session = Depends(get_db)):
-    service_date = parse(service_date).date()
-    payments = db.query(models.Payment).filter_by(service_date=service_date,
-                                                  claim_id=claim_id,
-                                                  member_id=member_id).all()
+@app.delete('/payment', status_code=status.HTTP_204_NO_CONTENT)
+def reverse_payment(request: schemas.ReversePayment, db: Session = Depends(get_db)):
+    payments = db.query(models.Payment).filter_by(service_date=request.service_date,
+                                                  claim_id=request.claim_id,
+                                                  member_id=request.member_id).all()
+    if not payments:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Payments not found")
+
     log.info(f"PAYMENTS TO REVERSE: {payments}")
     for payment in payments:
         log.info(f'REVERSING {payment.payment_id}')
@@ -79,9 +81,9 @@ def reverse_payment(claim_id: int, member_id: int, service_date: str, db: Sessio
                 else:
                     log.info(f"FOUND THE LINE TO BE DELETED")
 
-
-app.include_router(route)
-asyncio.create_task(consume())
+    return {
+        "message": "Payment reversed"
+    }
 
 
 @app.on_event("startup")
